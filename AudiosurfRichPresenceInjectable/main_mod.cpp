@@ -67,8 +67,8 @@ LRESULT WINAPI MessageInterceptor(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 		score = (char*)cds->lpData;
 		//Make only the score number remain in the stuff the game sent back
 		score.erase(0, 22);
-		fullScore = "Final score: " + score;
-		songFinishText = "Song finished (" + fullTags + ")";
+		fullScore = score + " points";
+		songFinishText = "Song finished: " + fullTags;
 		std::cout << "Song complete: " << artistTag << " - " << titleTag << " with score " << score << "\n";
 		UpdatePresence(fullScore.c_str(), songFinishText.c_str());
 	}
