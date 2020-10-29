@@ -9,6 +9,7 @@
 
 //Discord RPC stuff
 #include "discord-rpc/discord.h"
+#pragma comment(lib, "discord_game_sdk.dll.lib")
 
 //TagLib
 #pragma comment(lib, "taglib.lib")
