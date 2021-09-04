@@ -87,6 +87,9 @@
     <ClInclude Include="discord-rpc\voice_manager.h">
       <Filter>Headerdateien\discord</Filter>
     </ClInclude>
+    <ClInclude Include="broadcast_server.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -142,6 +145,9 @@
     </ClCompile>
     <ClCompile Include="discord-rpc\voice_manager.cpp">
       <Filter>Quelldateien\discord</Filter>
+    </ClCompile>
+    <ClCompile Include="broadcast_server.cpp">
+      <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

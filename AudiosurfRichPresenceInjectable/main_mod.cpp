@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "pch.h"
 #include <iostream>
+#include <set>
 
 //Microsoft Detours
 #include <detours.h>
@@ -16,6 +17,17 @@
 #include <taglib.h>
 #include <fileref.h>
 
+//Asio
+#define ASIO_STANDALONE
+#include <asio.hpp>
+
+//websocketpp
+#define _WEBSOCKETPP_CPP11_STRICT_
+#include <websocketpp/server.hpp>
+#include <websocketpp/config/asio_no_tls.hpp>
+#include "broadcast_server.h"
+broadcast_server wsEndpoint;
+
 #pragma region Detours things
 static LRESULT(WINAPI* TrueSendMessage)(
 	HWND hWnd,
@@ -25,6 +37,8 @@ static LRESULT(WINAPI* TrueSendMessage)(
 
 static TagLib::Tag* (__thiscall* TrueFileRefGetTag)(TagLib::FileRef* self) = nullptr;
 #pragma endregion
+
+bool windowRegistered;
 
 TagLib::Tag* tagPtr;
 std::string artistTag = std::string("Unknown Artist");
@@ -54,13 +68,31 @@ LRESULT WINAPI MessageInterceptor(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 	COPYDATASTRUCT* cds = (COPYDATASTRUCT*)lParam;
 	std::cout << "Outgoing message caught: " << (char*)cds->lpData << "\n";
 
+	if (strstr((char*)cds->lpData, (char*)"registered")) {
+		std::cout << "WM_COPYDATA successfully registered\n";
+		windowRegistered = true;
+		wsEndpoint.broadcast("RGST");
+	}
+
 	if (strstr((char*)cds->lpData, (char*)"oncharacterscreen")) {
 		std::cout << "Entered character select screen" << "\n";
 		UpdatePresence("Selecting character/song", "");
+		wsEndpoint.broadcast("MENU");
 	}
 
 	if (strstr((char*)cds->lpData, (char*)"nowplayingartistname")) {
 		std::cout << "Playing song: " << artistTag << " - " << titleTag << "\n";
+
+		std::string artistMsg;
+		artistMsg = "SNAR" + artistTag;
+		wsEndpoint.broadcast(artistMsg.c_str());
+
+		std::string songMsg;
+		songMsg = "SNST" + titleTag;
+		wsEndpoint.broadcast(songMsg.c_str());
+
+		wsEndpoint.broadcast("SONG");
+
 		UpdatePresence(fullTags.c_str(), "Riding song");
 	}
 
@@ -71,6 +103,21 @@ LRESULT WINAPI MessageInterceptor(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPa
 		fullScore = score + " points";
 		songFinishText = "Song finished: " + fullTags;
 		std::cout << "Song complete: " << artistTag << " - " << titleTag << " with score " << score << "\n";
+
+		std::string artistMsg;
+		artistMsg = "SNAR" + artistTag;
+		wsEndpoint.broadcast(artistMsg.c_str());
+
+		std::string songMsg;
+		songMsg = "SNST" + titleTag;
+		wsEndpoint.broadcast(songMsg.c_str());
+
+		std::string scoreMsg;
+		scoreMsg = "FNSC" + score;
+		wsEndpoint.broadcast(scoreMsg.c_str());
+
+		wsEndpoint.broadcast("RSLT");
+
 		UpdatePresence(fullScore.c_str(), songFinishText.c_str());
 	}
 
@@ -90,7 +137,25 @@ static TagLib::Tag* __fastcall FileRefGetTagInterceptor(TagLib::FileRef* self, D
 	fullTags = artistTag + std::string(" - ") + titleTag;
 
 	std::cout << "TagLib::FileRef::tag() caught! " << fullTags.c_str() << "\n";
+
+	if (!windowRegistered) {
+		std::cout << "FileRef received but the window isn't registered! Attempting registration...";
+		char* str = (char*)"ascommand registerlistenerwindow Audiosurf";
+		COPYDATASTRUCT cds;
+		cds.cbData = strlen(str) + 1;
+		cds.lpData = (void*)str;
+	}
+
 	return tagPtr;
+}
+
+void startWebSocketServer() {
+	try {
+		wsEndpoint.run(1502);
+	}
+	catch (websocketpp::exception e) {
+		std::cout << "WS Server init failed: " << e.what() << "\n";
+	}
 }
 
 DWORD WINAPI ModThread(HMODULE hModule)
@@ -104,7 +169,7 @@ DWORD WINAPI ModThread(HMODULE hModule)
 
 	std::cout << "DLL attached!\n";
 
-	//init discord stuff
+	//init Discord RPC
 	auto result = discord::Core::Create(698844368953671750, DiscordCreateFlags_Default, &core);
 	core->ActivityManager().RegisterSteam(12900);
 	core->UserManager().OnCurrentUserUpdate.Connect([]() {
@@ -140,6 +205,8 @@ DWORD WINAPI ModThread(HMODULE hModule)
 
 	SendMessage(hwndTargetWin, WM_COPYDATA, 0, (LPARAM)&cds);
 
+	std::thread t1(startWebSocketServer);
+
 	while (true) {
 		//Run Discord callbacks
 		core->RunCallbacks();
@@ -147,6 +214,8 @@ DWORD WINAPI ModThread(HMODULE hModule)
 		Sleep(16);
 	}
 	std::cout << "Shutting down! \n";
+
+	t1.join();
 
 	fclose(f);
 	FreeConsole();
