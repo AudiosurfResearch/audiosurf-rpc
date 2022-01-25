@@ -5,7 +5,7 @@ Also has an integrated WebSocket server that other programs can use to get info 
 
 # Installation
 Download the latest version from the [releases page](https://github.com/RubberDuckShobe/audiosurf-rpc/releases).
-Open Audiosurf's ``engine`` folder (on a normal install it's at C:\Program Files (x86)\Steam\steamapps\common\Audiosurf\engine), copy all the things from the release's .zip into there and allow Windows to overwrite the existing files.
+Open Audiosurf's ``engine`` folder and then enter the ``channels`` folder (on a normal install it's at C:\Program Files (x86)\Steam\steamapps\common\Audiosurf\engine\channels), copy all the things from the release's .zip into there and allow Windows to overwrite the existing files.
 
 All that's left to do is launch the game! If a command line window opens while the game is loading, that means you installed audiosurf-rpc correctly!
 Have fun!
