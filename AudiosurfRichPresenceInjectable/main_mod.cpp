@@ -196,6 +196,12 @@ DWORD WINAPI ModThread(HMODULE hModule)
 	
 	//get Audiosurf's window handle
 	HWND hwndTargetWin = FindWindow(NULL, L"Audiosurf");
+	while (!hwndTargetWin)
+	{
+		std::cout << "Couldn't get Audiosurf window handle, retrying in 500ms.\n";
+		Sleep(500);
+		hwndTargetWin = FindWindow(NULL, L"Audiosurf");
+	}
 
 	//create the command message and data struct
 	char* str = (char*)"ascommand quickstartregisterwindow Audiosurf";
